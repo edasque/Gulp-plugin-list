@@ -16,7 +16,7 @@ var bar;
 
 var aws = require("aws2js");
 
-program.version('0.0.1').option('-ll, --log-level <l>', 'Set the log level', 5).parse(process.argv);
+program.version('0.0.2').option('-ll, --log-level <l>', 'Set the log level', 5).parse(process.argv);
 
 var level = program.logLevel
 
