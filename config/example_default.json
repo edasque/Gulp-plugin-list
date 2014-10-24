@@ -1,5 +1,10 @@
 {
   "github_config": {
     "github_token": "-INSERT APP TOKEN HERE -"
+  },
+  "s3_config": {
+    "accessKeyId": "yourAWSaccessKeyID",
+    "secretAccessKey": "yourAWSAccessKey",
+    "bucket": "yourBucketName"
   }
 }
