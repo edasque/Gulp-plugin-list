@@ -7,6 +7,7 @@ var program = require('commander');
 var Step = require('step');
 var config = require('config');
 var cheerio = require("cheerio");
+var _ = require('lodash');
 
 var ProgressBar = require('progress');
 var bar;
@@ -66,7 +67,7 @@ var catalog = [];
 var gh = /.*github.com\/(.*\/.*)/
 
 var npm_search_terms = ["gulpplugin"];
-// npm_search_terms = ["gulp-exec"];
+var npm_search_terms2 = ["gulpfriendly"];
 
 // Reference: 'gulp-shell' is blacklisted
 
@@ -110,17 +111,39 @@ function isBlacklisted(plugin_name) {
 // once npm has loaded, search the npm directory for plugins that match the npm_search_terms, silently
 function searchGulpPlugins() {
 
-  npm.commands.search(npm_search_terms, true, null, dumpResults);
+  npm.commands.search(npm_search_terms, true, null,
+    function(err, search1) {
+      logger.log("notice", "Ran npm search for: ", npm_search_terms);
+      if (err) {
+        logger.log("error", "Error running search for " + npm_search_terms);
+        console.error(err);
+      } else {
+        logger.log("notice", "Search for ", npm_search_terms, " returned ", Object.keys(search1).length, " items");
 
-  function dumpResults(err, searchResults) {
-    logger.log("notice", "Ran npm search for: ", npm_search_terms);
+        npm.commands.search(npm_search_terms2, true, null,
+          function(err2, search2) {
+            logger.log("notice", "Ran npm search for: ", npm_search_terms2);
+            if (err) {
+              logger.log("error", "Error running search for " + npm_search_terms2);
+              console.error(err);
+            } else {
+              logger.log("notice", "Search for ", npm_search_terms2, " returned ", Object.keys(search2).length, " items");
 
-    if (err) {
-      logger.log("error", "Error running search for " + npm_search_terms);
-      console.error(err);
-    } else {
+              var combined_search = _.merge(search1, search2);
 
-      /* Looks like this this, a big object, one property per package. Might be a good idea to make an array of it
+              logger.log("notice", "Combined search for ", _.union(npm_search_terms, npm_search_terms2), " returned ", Object.keys(combined_search).length, " items");
+
+              dumpResults(combined_search);
+            }
+          });
+
+      }
+    });
+
+  function dumpResults(searchResults) {
+
+
+    /* Looks like this this, a big object, one property per package. Might be a good idea to make an array of it
 
         { 'amd-optimize':
            { name: 'amd-optimize',
@@ -138,57 +161,60 @@ function searchGulpPlugins() {
 
       */
 
-      // this will hold the Github repo URL that we figure out for each entry in the search
-      logger.log("notice", "Search for ", npm_search_terms, " returned ", Object.keys(searchResults).length, " items");
-      bar = new ProgressBar('Progress'.blue+' :bar :percent :current/:total :etas', {
-    complete: '⦿', 
-    incomplete: ' ', width:40, total: Object.keys(searchResults).length });
+    // this will hold the Github repo URL that we figure out for each entry in the search
+    logger.log("notice", "Search for ", npm_search_terms, " returned ", Object.keys(searchResults).length, " items");
+    bar = new ProgressBar('Progress'.blue + ' :bar :percent :current/:total :etas', {
+      complete: '⦿',
+      incomplete: ' ',
+      width: 40,
+      total: Object.keys(searchResults).length
+    });
 
-      Step(function forAllResults() {
-          var group = this.group();
+    Step(function forAllResults() {
+        var group = this.group();
 
-          // for each search result
-          for (var packagename in searchResults) {
-            searchResults[packagename].blacklisted = isBlacklisted(packagename);
-            ready_npm_view_call(searchResults[packagename], group());
-
-          }
-        },
-        function processResults(err_multi, process_results) {
-          if (err_multi) {
-            console.log("Errors:")
-            console.dir(err_multi)
-            process.exit(1)
-          } else {
-            console.log("\n");
-            logger.log("notice", "Processed", Object.keys(process_results).length, "items for ",npm_search_terms,"search");
-
-            var s3buffer = new Buffer("process_gulp_plugins" + "(" + JSON.stringify(process_results, null, 4) + ");", "utf-8");
-            //var s3buffer = new Buffer(JSON.stringify(process_results, null, 4), "utf-8");
-
-            logger.log("notice", "Uploading document to S3");
-            s3.putBuffer("gulp-plugins.jsonp", s3buffer, false, {
-              'content-type': 'text/javascript'
-            }, this);
-          }
-        },
-        function confirmUpload(uploadError, final) {
-          if (uploadError) {
-            console.log(uploadError.message);
-            sendMe(uploadError.name, uploadError.message);
-            throw uploadError;
-          } else {
-            logger.log("notice", "Successfully uploaded document to S3");
-            if (logger.config.level == 6) console.dir(final)
-          }
+        // for each search result
+        for (var packagename in searchResults) {
+          searchResults[packagename].blacklisted = isBlacklisted(packagename);
+          ready_npm_view_call(searchResults[packagename], group());
 
         }
+      },
+      function processResults(err_multi, process_results) {
+        if (err_multi) {
+          console.log("Errors:")
+          console.dir(err_multi)
+          process.exit(1)
+        } else {
+          console.log("\n");
+          logger.log("notice", "Processed", Object.keys(process_results).length, "items for ", npm_search_terms, "search");
+
+          var s3buffer = new Buffer("process_gulp_plugins" + "(" + JSON.stringify(process_results, null, 4) + ");", "utf-8");
+          //var s3buffer = new Buffer(JSON.stringify(process_results, null, 4), "utf-8");
+
+          logger.log("notice", "Uploading document to S3");
+          s3.putBuffer("gulp-plugins.jsonp", s3buffer, false, {
+            'content-type': 'text/javascript'
+          }, this);
+        }
+      },
+      function confirmUpload(uploadError, final) {
+        if (uploadError) {
+          console.log(uploadError.message);
+          sendMe(uploadError.name, uploadError.message);
+          throw uploadError;
+        } else {
+          logger.log("notice", "Successfully uploaded document to S3");
+          if (logger.config.level == 6) console.dir(final)
+        }
+
+      }
 
 
 
-      );
+    );
 
-    }
+
   }
 
 }
@@ -217,9 +243,9 @@ function grab_extra_npm_info(npm_package, callback) {
 
       var $ = cheerio.load(body);
 
-      var the_right_index = $('.downloads td').length-2;
+      var the_right_index = $('.downloads td').length - 2;
 
-      npm_package.downloads_this_month = parseInt($('.downloads td').eq(the_right_index).text().replace(/ /g,''));
+      npm_package.downloads_this_month = parseInt($('.downloads td').eq(the_right_index).text().replace(/ /g, ''));
 
       logger.log("info", "npm_package.downloads_this_month:", npm_package.downloads_this_month);
 

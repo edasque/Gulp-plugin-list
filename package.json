@@ -4,20 +4,20 @@
   "description": "Grabs the list of gulp plugins from npm, marks some as blacklisted, fetches github repo information and npm.org download # then uploads the content to a jsonp file",
   "main": "gulp-plugins-search.js",
   "dependencies": {
-    "caterpillar": "^2.0.7",
     "aws2js": "^0.8.3",
+    "caterpillar": "^2.0.7",
     "caterpillar-filter": "^2.0.3",
     "caterpillar-human": "^2.1.2",
     "cheerio": "^0.17.0",
     "colors": "^0.6.2",
     "commander": "^2.3.0",
     "config": "^1.2.1",
+    "lodash": "^2.4.1",
     "npm": "^2.0.0",
     "progress": "^1.1.8",
     "request": "^2.42.0",
-    "step": "^0.0.5",
+    "step": "^0.0.5"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
