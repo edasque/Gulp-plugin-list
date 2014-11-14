@@ -315,7 +315,6 @@ function build_with_npm_view(npm_package, callback) {
         if (github_matching && github_matching[1]) {
 
           npm_package.github_repo = github_matching[1].replace(".git", "")
-          // if (package_obj.name === "gulp-jsfuck") console.dir(github_matching)
 
           logger.log("info", npm_package.name, " matched github: ", npm_package.github_repo)
 
